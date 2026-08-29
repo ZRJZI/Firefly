@@ -168,6 +168,486 @@ const {
 <FloatingControls headings={headings} encrypted={encrypted} />
 
 <!--
+	========================================================
+	壁纸自动取色功能
+	========================================================
+
+	这个脚本做的事情很简单：
+
+	1. 找到 Firefly 当前显示的壁纸
+	2. 等壁纸加载完成
+	3. 从壁纸里取一个“代表颜色”
+	4. 把这个颜色的色相（Hue）交给 Firefly
+	5. Firefly 的主题颜色就会跟着壁纸变化
+
+	为什么要放在这里？
+
+	因为 MainGridLayout 是页面的主要布局，
+	可以在整个页面加载后运行这个功能。
+
+	注意：
+	我们使用的是自己的 /api/wallpaper 图片地址，
+	而不是直接读取 t.alcy.cc 的图片。
+
+	这样可以绕开图库没有 CORS 的问题。
+-->
+
+<script>
+	// ========================================================
+	// 第一部分：一些可以调整的设置
+	// ========================================================
+
+	// 取色时把图片缩小到这个宽度。
+	//
+	// 50 像素已经足够判断图片的大致颜色，
+	// 没必要处理一整张高清壁纸。
+	const COLOR_SAMPLE_WIDTH = 50;
+
+	// 防止壁纸切换时短时间内重复计算很多次。
+	// 单位是毫秒。
+	const COLOR_UPDATE_DELAY = 150;
+
+
+	// ========================================================
+	// 第二部分：RGB 转 HSL
+	// ========================================================
+	//
+	// 图片读取出来的是 RGB：
+	//
+	// R = 红色
+	// G = 绿色
+	// B = 蓝色
+	//
+	// Firefly 的主题色主要使用 Hue（色相），
+	// 所以这里需要把 RGB 转换成 HSL。
+	//
+	// H = Hue（色相）
+	// S = Saturation（饱和度）
+	// L = Lightness（亮度）
+	//
+
+	// 把 RGB 颜色转换成 HSL 颜色。
+// r、g、b 都是数字，范围是 0～255。
+function rgbToHsl(
+	r: number,
+	g: number,
+	b: number,
+) {
+		// 浏览器给我们的 RGB 范围是 0～255，
+		// 转换成 0～1 方便计算。
+		r /= 255;
+		g /= 255;
+		b /= 255;
+
+		const max = Math.max(r, g, b);
+		const min = Math.min(r, g, b);
+
+		let h = 0;
+		let s = 0;
+
+		// 亮度 = 最大值和最小值的平均值
+		const l = (max + min) / 2;
+
+		// 如果三个颜色完全一样，
+		// 说明它是灰色，没有明显的色相。
+		if (max !== min) {
+			const d = max - min;
+
+			// 根据亮度计算饱和度
+			s =
+				l > 0.5
+					? d / (2 - max - min)
+					: d / (max + min);
+
+			// 根据哪个颜色最大，计算色相
+			switch (max) {
+				case r:
+					h = (g - b) / d + (g < b ? 6 : 0);
+					break;
+
+				case g:
+					h = (b - r) / d + 2;
+					break;
+
+				case b:
+					h = (r - g) / d + 4;
+					break;
+			}
+
+			h /= 6;
+		}
+
+		// H 从 0～1 转成我们更容易理解的 0～360 度。
+		return {
+			h: Math.round(h * 360),
+			s: Math.round(s * 100),
+			l: Math.round(l * 100),
+		};
+	}
+
+
+	// ========================================================
+	// 第三部分：获取壁纸的平均颜色
+	// ========================================================
+
+	// 从已经加载好的壁纸图片中读取颜色。
+// img 就是网页里的图片元素。
+function getWallpaperColor(img: HTMLImageElement) {
+		// 创建一个看不见的 Canvas。
+		//
+		// 可以简单理解成：
+		// 在网页后台创建一张“小画布”，
+		// 把壁纸缩小画进去，然后读取颜色。
+		const canvas = document.createElement("canvas");
+
+		const ctx = canvas.getContext("2d", {
+			willReadFrequently: true,
+		});
+
+		// 如果浏览器无法创建 Canvas，就停止。
+		if (!ctx) {
+			return null;
+		}
+
+		// 图片还没有真正加载完成，也停止。
+		if (!img.naturalWidth || !img.naturalHeight) {
+			return null;
+		}
+
+		// 根据图片比例计算缩小后的高度。
+		const scale = COLOR_SAMPLE_WIDTH / img.naturalWidth;
+
+		canvas.width = COLOR_SAMPLE_WIDTH;
+
+		canvas.height = Math.max(
+			1,
+			Math.round(img.naturalHeight * scale)
+		);
+
+		// 把壁纸画到 Canvas 上。
+		ctx.drawImage(
+			img,
+			0,
+			0,
+			canvas.width,
+			canvas.height
+		);
+
+		// 获取图片中的所有像素。
+		const pixels = ctx.getImageData(
+			0,
+			0,
+			canvas.width,
+			canvas.height
+		).data;
+
+		let red = 0;
+		let green = 0;
+		let blue = 0;
+		let count = 0;
+
+		// 每隔几个像素读取一次。
+		//
+		// 不需要把每一个像素都计算，
+		// 这样可以减少浏览器的工作量。
+		for (let i = 0; i < pixels.length; i += 16) {
+			const alpha = pixels[i + 3];
+
+			// 透明像素不参与计算。
+			if (alpha < 128) {
+				continue;
+			}
+
+			red += pixels[i];
+			green += pixels[i + 1];
+			blue += pixels[i + 2];
+
+			count++;
+		}
+
+		// 没有读取到有效像素。
+		if (count === 0) {
+			return null;
+		}
+
+		// 计算平均 RGB。
+		return {
+			r: Math.round(red / count),
+			g: Math.round(green / count),
+			b: Math.round(blue / count),
+		};
+	}
+
+
+	// ========================================================
+	// 第四部分：找到当前正在显示的壁纸
+	// ========================================================
+
+	function findWallpaper() {
+		// Firefly 的壁纸外层容器。
+		const wrapper =
+			document.getElementById("wallpaper-wrapper");
+
+		// 如果壁纸容器还没出现，就返回 null。
+		if (!wrapper) {
+			return null;
+		}
+
+		// 先寻找当前正在显示的图片。
+		//
+		// Firefly 的轮播切换时会给当前图片添加 active。
+		const activeImage =
+			wrapper.querySelector(
+				".slide-item.active img"
+			);
+
+		if (
+			activeImage instanceof HTMLImageElement
+		) {
+			return activeImage;
+		}
+
+		// 如果暂时没有 active，
+		// 就找壁纸容器里面第一张已经加载的图片。
+		const images =
+			wrapper.querySelectorAll("img");
+
+		for (const image of images) {
+			if (
+				image instanceof HTMLImageElement &&
+				image.complete &&
+				image.naturalWidth > 0
+			) {
+				return image;
+			}
+		}
+
+		return null;
+	}
+
+
+	// ========================================================
+	// 第五部分：把颜色应用到 Firefly
+	// ========================================================
+
+	function updateThemeColor() {
+		const img = findWallpaper();
+
+		// 当前还没有找到壁纸。
+		if (!img) {
+			return;
+		}
+
+		// 图片还没有加载完成。
+		//
+		// 等图片加载完成以后再重新取色。
+		if (!img.complete || !img.naturalWidth) {
+			img.addEventListener(
+				"load",
+				updateThemeColor,
+				{ once: true }
+			);
+
+			return;
+		}
+
+		try {
+			// 从壁纸读取平均 RGB。
+			const rgb = getWallpaperColor(img);
+
+			if (!rgb) {
+				return;
+			}
+
+			// RGB 转成 HSL。
+			const hsl = rgbToHsl(
+				rgb.r,
+				rgb.g,
+				rgb.b
+			);
+
+			// 获取网页最外层的 html 元素。
+			const root =
+				document.documentElement;
+
+			// ==================================================
+			// 这里是最关键的一行！
+			//
+			// 把壁纸的色相交给 Firefly。
+			//
+			// 例如：
+			//
+			// 蓝色壁纸 → Hue 大约 220
+			// 紫色壁纸 → Hue 大约 270
+			// 黄色壁纸 → Hue 大约 50
+			//
+			// Firefly 的主题就会根据这个色相变化。
+			// ==================================================
+
+			root.style.setProperty(
+				"--hue",
+				String(hsl.h)
+			);
+
+			// 在浏览器 Console 里留下日志。
+			//
+			// 如果以后出现问题，我们可以通过这个日志
+			// 判断到底有没有成功取到颜色。
+			console.log(
+				"[壁纸取色]",
+				`RGB(${rgb.r}, ${rgb.g}, ${rgb.b})`,
+				`Hue: ${hsl.h}`
+			);
+
+		} catch (error) {
+			// 如果浏览器因为图片权限等原因无法读取，
+			// 不让整个网页报错，只在 Console 提示。
+			console.warn(
+				"[壁纸取色] 无法读取壁纸颜色",
+				error
+			);
+		}
+	}
+
+
+	// ========================================================
+	// 第六部分：监听壁纸变化
+	// ========================================================
+
+	// 记录“稍后再取色”的定时器。
+// 没有定时器时就是 null。
+let updateTimer: ReturnType<typeof setTimeout> | null = null;
+
+	function scheduleThemeUpdate() {
+		// 如果之前已经安排了一次更新，
+		// 就取消它。
+		if (updateTimer) {
+			clearTimeout(updateTimer);
+		}
+
+		// 稍微等一下再取色。
+		//
+		// 这是因为 Firefly 切换壁纸的时候，
+		// 图片、class 等状态不是同一瞬间完成的。
+		updateTimer = setTimeout(() => {
+			updateThemeColor();
+		}, COLOR_UPDATE_DELAY);
+	}
+
+
+	function startWallpaperTheme() {
+		// 找到壁纸容器。
+		const wrapper =
+			document.getElementById("wallpaper-wrapper");
+
+		// 壁纸还没进入页面。
+		//
+		// 300 毫秒后再试一次。
+		if (!wrapper) {
+			setTimeout(
+				startWallpaperTheme,
+				300
+			);
+
+			return;
+		}
+
+		// 页面第一次打开时取一次颜色。
+		scheduleThemeUpdate();
+
+
+		// ==================================================
+		// MutationObserver
+		// ==================================================
+		//
+		// 简单理解：
+		//
+		// “盯着壁纸这个区域。”
+		//
+		// 如果里面的图片、class、src 等发生变化，
+		// 就重新取色。
+		//
+
+		const observer =
+			new MutationObserver(() => {
+				scheduleThemeUpdate();
+			});
+
+		observer.observe(wrapper, {
+			// 监听新增/删除元素
+			childList: true,
+
+			// 监听里面所有子元素
+			subtree: true,
+
+			// 监听 class、src 等属性变化
+			attributes: true,
+
+			attributeFilter: [
+				"class",
+				"src",
+				"srcset",
+			],
+		});
+
+
+		// ==================================================
+		// 监听图片加载
+		// ==================================================
+		//
+		// 随机图库返回的图片可能需要一点时间下载。
+		// 图片真正加载完成以后，再取一次颜色。
+		//
+
+		wrapper.addEventListener(
+			"load",
+			(event) => {
+				if (
+					event.target instanceof
+					HTMLImageElement
+				) {
+					scheduleThemeUpdate();
+				}
+			},
+			true
+		);
+
+
+		// ==================================================
+		// 最后的保险机制
+		// ==================================================
+		//
+		// 每秒检查一次。
+		//
+		// 这不是为了每秒重新取色，
+		// 而是防止某些轮播变化没有被 MutationObserver 捕获。
+		//
+
+		setInterval(() => {
+			scheduleThemeUpdate();
+		}, 1000);
+	}
+
+
+	// ========================================================
+	// 第七部分：启动整个功能
+	// ========================================================
+
+	// 如果网页还没有加载完成，
+	// 等 DOMContentLoaded 后再开始。
+	if (document.readyState === "loading") {
+		document.addEventListener(
+			"DOMContentLoaded",
+			startWallpaperTheme,
+			{ once: true }
+		);
+	} else {
+		// 如果网页已经加载完成，直接开始。
+		startWallpaperTheme();
+	}
+</script>
+
+<!--
     触屏设备上让代码块的复制按钮默认隐藏，点一下代码块才显形。
     expressive-code 没给 <pre> 加 tabindex，点击代码区不会产生焦点，
     所以纯 CSS 的 :focus-within 拿不到这个状态，只能在这里补一个类。
