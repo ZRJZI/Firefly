@@ -175,19 +175,13 @@ const {
 -->
 
 <script client:load>
-// 自动从壁纸提取主色调，同步全局主题色
 (function() {
-  // 可微调配置
   const CONFIG = {
-    // 只提取色相，保持原主题色的饱和度，视觉更协调
     keepSaturation: true,
-    // 颜色渐变过渡时长，单位秒
     transition: 0.8,
-    // 取色取样大小，数值越大越精准，50足够平衡速度和效果
     sampleSize: 50
   };
 
-  // RGB 转 HSL 标准算法
   function rgbToHsl(r, g, b) {
     r /= 255; g /= 255; b /= 255;
     const max = Math.max(r, g, b);
@@ -213,7 +207,6 @@ const {
     };
   }
 
-  // 提取图片平均主色
   function getAverageColor(img) {
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
@@ -224,15 +217,12 @@ const {
 
     const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
     let r = 0, g = 0, b = 0, count = 0;
-
-    // 间隔取样，提升性能
     for (let i = 0; i < data.length; i += 16) {
       r += data[i];
       g += data[i + 1];
       b += data[i + 2];
       count++;
     }
-
     return {
       r: Math.round(r / count),
       g: Math.round(g / count),
@@ -240,13 +230,10 @@ const {
     };
   }
 
-  // 获取当前壁纸的图片地址
   function getWallpaperSrc() {
-    // 优先找壁纸 img 标签
     const img = document.querySelector('#wallpaper-wrapper img');
     if (img && img.src) return img.src;
 
-    // 找不到就取 div 背景图
     const el = document.querySelector('#wallpaper-wrapper');
     if (!el) return null;
     const bg = getComputedStyle(el).backgroundImage;
@@ -254,47 +241,46 @@ const {
     return match ? match[1] : null;
   }
 
-    // 应用主题色到全局
-    function applyThemeColor(src) {
-      if (!src) return;
-
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      img.src = src;
-
-      // 兼容懒加载：等待图片真正完成解码
-      img.decode().then(() => {
-        try {
-          const rgb = getAverageColor(img);
-          const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
-          const root = document.documentElement;
-          root.style.setProperty('--hue', hsl.h);
-          if (!CONFIG.keepSaturation) {
-            root.style.setProperty('--saturation', hsl.s + '%');
-          }
-          root.style.transition = `--hue ${CONFIG.transition}s ease`;
-          console.log("壁纸取色成功，hue:", hsl.h);
-        } catch (e) {
-          console.warn('壁纸取色失败，使用默认主题色', e);
-        }
-      }).catch(() => {
-        console.warn('壁纸加载失败，跳过取色');
-      });
+  function applyThemeColor(src) {
+    if (!src) {
+      console.warn("⚠️未找到壁纸图片地址");
+      return;
     }
-  
+    console.log("识别壁纸地址：", src);
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = src;
 
-  // 页面加载完成后执行
+    img.decode().then(() => {
+      try {
+        const rgb = getAverageColor(img);
+        const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+        const root = document.documentElement;
+        // ✅这里已经写死正确变量 --configHue，不用你手动修改
+        root.style.setProperty('--configHue', hsl.h);
+        if (!CONFIG.keepSaturation) {
+          root.style.setProperty('--saturation', hsl.s + '%');
+        }
+        root.style.transition = `--configHue ${CONFIG.transition}s ease`;
+        console.log("✅壁纸取色成功，hue:", hsl.h);
+      } catch (e) {
+        console.warn('取色失败', e);
+      }
+    }).catch(() => {
+      console.warn('❌壁纸加载失败');
+    });
+  }
+
   if (document.readyState === 'complete') {
     applyThemeColor(getWallpaperSrc());
   } else {
     window.addEventListener('load', () => applyThemeColor(getWallpaperSrc()));
   }
 
-  // 进阶：开启壁纸切换功能时，监听壁纸变化自动重新取色
+  // ✅延时已经改成2000
   setTimeout(() => {
     const wallpaperEl = document.querySelector('#wallpaper-wrapper');
     if (!wallpaperEl) return;
-    
     new MutationObserver(() => {
       const newSrc = getWallpaperSrc();
       if (newSrc) applyThemeColor(newSrc);
@@ -303,10 +289,9 @@ const {
       attributeFilter: ['src', 'style'],
       subtree: true
     });
-  }, 1000);
+  }, 2000);
 })();
 </script>
-
 
 </Layout>
 
