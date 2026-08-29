@@ -83,6 +83,68 @@
   /* 主题色选择条渐变 */
   --color-selection-bar: linear-gradient(to right, oklch(0.80 0.10 0), oklch(0.80 0.10 30), oklch(0.80 0.10 60), oklch(0.80 0.10 90), oklch(0.80 0.10 120), oklch(0.80 0.10 150), oklch(0.80 0.10 180), oklch(0.80 0.10 210), oklch(0.80 0.10 240), oklch(0.80 0.10 270), oklch(0.80 0.10 300), oklch(0.80 0.10 330), oklch(0.80 0.10 360))
 
+/*
+ * ============================================================
+ * 壁纸加载中的临时灰色主题
+ * ============================================================
+ *
+ * 页面刚打开时，壁纸通常还在下载。
+ * 这时候我们暂时不使用默认的绿色主题，
+ * 而是使用中性的灰色作为“等待颜色”。
+ *
+ * 等 MainGridLayout 成功读取壁纸颜色后，
+ * 会删除 html 上的 data-wallpaper-theme="loading"，
+ * 下面这些灰色变量就会自动失效。
+ * ============================================================
+ */
+html[data-wallpaper-theme="loading"]
+  --primary: oklch(0.65 0 0)
+  --btn-content: oklch(0.55 0 0)
+  --btn-regular-bg: oklch(0.95 0 0)
+  --btn-regular-bg-hover: oklch(0.90 0 0)
+  --btn-regular-bg-active: oklch(0.85 0 0)
+  --btn-plain-bg-hover: oklch(0.95 0 0)
+  --btn-plain-bg-active: oklch(0.98 0 0)
+  --btn-card-bg-hover: oklch(0.98 0 0)
+  --btn-card-bg-active: oklch(0.90 0 0)
+  --deep-text: oklch(0.25 0 0)
+  --title-active: oklch(0.60 0 0)
+  --muted: oklch(0.93 0 0)
+  --selection-bg: oklch(0.90 0 0)
+  --link-underline: oklch(0.93 0 0)
+  --link-hover: oklch(0.95 0 0)
+  --link-active: oklch(0.90 0 0)
+  --toc-badge-bg: oklch(0.90 0 0)
+  --toc-btn-hover: oklch(0.92 0 0)
+  --toc-btn-active: oklch(0.90 0 0)
+  --toc-indicator-bg: oklch(0.92 0 0)
+  --toc-item-active: oklch(0.70 0 0)
+  --l2d-msg-bg: oklch(0.70 0 0)
+
+/* 深色模式下同样使用中性灰，但保持深色页面的明暗层次。 */
+html.dark[data-wallpaper-theme="loading"]
+  --primary: oklch(0.75 0 0)
+  --page-bg: oklch(0.16 0 0)
+  --card-bg: oklch(0.23 0 0)
+  --btn-content: oklch(0.75 0 0)
+  --btn-regular-bg: oklch(0.33 0 0)
+  --btn-regular-bg-hover: oklch(0.38 0 0)
+  --btn-regular-bg-active: oklch(0.43 0 0)
+  --btn-plain-bg-hover: oklch(0.30 0 0)
+  --btn-plain-bg-active: oklch(0.27 0 0)
+  --btn-card-bg-hover: oklch(0.30 0 0)
+  --btn-card-bg-active: oklch(0.35 0 0)
+  --muted: oklch(0.25 0 0)
+  --selection-bg: oklch(0.40 0 0)
+  --link-underline: oklch(0.40 0 0)
+  --link-hover: oklch(0.40 0 0)
+  --link-active: oklch(0.35 0 0)
+  --toc-btn-hover: oklch(0.28 0 0)
+  --toc-btn-active: oklch(0.32 0 0)
+  --toc-indicator-bg: oklch(0.28 0 0)
+  --toc-item-active: oklch(0.35 0 0)
+  --l2d-msg-bg: oklch(0.35 0 0)
+
 /* 卡片风格跟随主题色相 */
 :root:not(.dark) body.card-follow-theme-hue
   --card-bg: oklch(1 0.01 var(--hue))
