@@ -243,11 +243,11 @@ const {
   // 获取当前壁纸的图片地址
   function getWallpaperSrc() {
     // 优先找壁纸 img 标签
-    const img = document.querySelector('[class*="wallpaper"] img');
+    const img = document.querySelector('#wallpaper-wrapper img');
     if (img && img.src) return img.src;
 
     // 找不到就取 div 背景图
-    const el = document.querySelector('[class*="wallpaper"]');
+    const el = document.querySelector('#wallpaper-wrapper');
     if (!el) return null;
     const bg = getComputedStyle(el).backgroundImage;
     const match = bg.match(/url\(["']?([^"')]+)["']?\)/);
@@ -292,7 +292,7 @@ const {
 
   // 进阶：开启壁纸切换功能时，监听壁纸变化自动重新取色
   setTimeout(() => {
-    const wallpaperEl = document.querySelector('[class*="wallpaper"]');
+    const wallpaperEl = document.querySelector('#wallpaper-wrapper');
     if (!wallpaperEl) return;
     
     new MutationObserver(() => {
