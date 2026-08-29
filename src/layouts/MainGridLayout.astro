@@ -254,39 +254,34 @@ const {
     return match ? match[1] : null;
   }
 
-  // 应用主题色到全局
-  function applyThemeColor(src) {
-    if (!src) return;
+    // 应用主题色到全局
+    function applyThemeColor(src) {
+      if (!src) return;
 
-    const img = new Image();
-    // 处理跨域，支持绝大多数公共随机图库API
-    img.crossOrigin = 'anonymous';
-    
-    img.onload = function() {
-      try {
-        const rgb = getAverageColor(img);
-        const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
-        const root = document.documentElement;
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      img.src = src;
 
-        // 只修改色相变量，全站主题色自动同步
-        root.style.setProperty('--hue', hsl.h);
-        
-        // 关闭保持饱和度时，同步壁纸本身的饱和度
-        if (!CONFIG.keepSaturation) {
-          root.style.setProperty('--saturation', hsl.s + '%');
+      // 兼容懒加载：等待图片真正完成解码
+      img.decode().then(() => {
+        try {
+          const rgb = getAverageColor(img);
+          const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+          const root = document.documentElement;
+          root.style.setProperty('--hue', hsl.h);
+          if (!CONFIG.keepSaturation) {
+            root.style.setProperty('--saturation', hsl.s + '%');
+          }
+          root.style.transition = `--hue ${CONFIG.transition}s ease`;
+          console.log("壁纸取色成功，hue:", hsl.h);
+        } catch (e) {
+          console.warn('壁纸取色失败，使用默认主题色', e);
         }
-
-        // 添加平滑过渡
-        root.style.transition = `--hue ${CONFIG.transition}s ease`;
-      } catch (e) {
-        // 取色失败自动回退默认主题色，不报错
-        console.warn('壁纸取色失败，使用默认主题色', e);
-      }
-    };
-
-    img.onerror = () => console.warn('壁纸加载失败，跳过取色');
-    img.src = src;
-  }
+      }).catch(() => {
+        console.warn('壁纸加载失败，跳过取色');
+      });
+    }
+  
 
   // 页面加载完成后执行
   if (document.readyState === 'complete') {
