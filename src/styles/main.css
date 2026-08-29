@@ -11,6 +11,54 @@
 @import './display-settings.css';
 @import './categories.css';
 @import './layout-base.css';
+@import './layout-base.css';
+
+/*
+ * ============================================================
+ * 壁纸主题色平滑渐变
+ * ============================================================
+ *
+ * 让 Firefly 的主题色在壁纸切换后平滑过渡，
+ * 而不是从原来的颜色突然跳到新的颜色。
+ * ============================================================
+ */
+
+@property --hue {
+  /* 告诉浏览器：--hue 是一个数字 */
+  syntax: "<number>";
+
+  /* 允许这个变量被子元素继承 */
+  inherits: true;
+
+  /* 默认色相。
+     只是网页刚打开、还没有取到壁纸颜色时的备用值。 */
+  initial-value: 165;
+}
+
+/*
+ * 主题颜色渐变需要多长时间。
+ *
+ * 0.8 秒 = 800 毫秒。
+ */
+:root {
+  --wallpaper-theme-transition: 0.8s;
+
+  /*
+   * 当 JavaScript 修改 --hue 时，
+   * 浏览器会让颜色慢慢变化。
+   */
+  transition: --hue var(--wallpaper-theme-transition) ease;
+}
+
+/*
+ * 如果用户的系统开启了“减少动画”，
+ * 就关闭这个渐变。
+ */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --wallpaper-theme-transition: 0s;
+  }
+}
 
 @plugin '@tailwindcss/typography';
 
