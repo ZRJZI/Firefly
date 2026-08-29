@@ -174,6 +174,144 @@ const {
     显隐规则见 src/styles/expressive-code.css 的 @media (hover: none) 段。
 -->
 
+<script client:load>
+// 自动从壁纸提取主色调，同步全局主题色
+(function() {
+  // 可微调配置
+  const CONFIG = {
+    // 只提取色相，保持原主题色的饱和度，视觉更协调
+    keepSaturation: true,
+    // 颜色渐变过渡时长，单位秒
+    transition: 0.8,
+    // 取色取样大小，数值越大越精准，50足够平衡速度和效果
+    sampleSize: 50
+  };
+
+  // RGB 转 HSL 标准算法
+  function rgbToHsl(r, g, b) {
+    r /= 255; g /= 255; b /= 255;
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    let h, s, l = (max + min) / 2;
+
+    if (max === min) {
+      h = s = 0;
+    } else {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+      switch (max) {
+        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+        case g: h = (b - r) / d + 2; break;
+        case b: h = (r - g) / d + 4; break;
+      }
+      h /= 6;
+    }
+    return {
+      h: Math.round(h * 360),
+      s: Math.round(s * 100),
+      l: Math.round(l * 100)
+    };
+  }
+
+  // 提取图片平均主色
+  function getAverageColor(img) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const scale = CONFIG.sampleSize / img.width;
+    canvas.width = CONFIG.sampleSize;
+    canvas.height = img.height * scale;
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+    const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    let r = 0, g = 0, b = 0, count = 0;
+
+    // 间隔取样，提升性能
+    for (let i = 0; i < data.length; i += 16) {
+      r += data[i];
+      g += data[i + 1];
+      b += data[i + 2];
+      count++;
+    }
+
+    return {
+      r: Math.round(r / count),
+      g: Math.round(g / count),
+      b: Math.round(b / count)
+    };
+  }
+
+  // 获取当前壁纸的图片地址
+  function getWallpaperSrc() {
+    // 优先找壁纸 img 标签
+    const img = document.querySelector('[class*="wallpaper"] img');
+    if (img && img.src) return img.src;
+
+    // 找不到就取 div 背景图
+    const el = document.querySelector('[class*="wallpaper"]');
+    if (!el) return null;
+    const bg = getComputedStyle(el).backgroundImage;
+    const match = bg.match(/url\(["']?([^"')]+)["']?\)/);
+    return match ? match[1] : null;
+  }
+
+  // 应用主题色到全局
+  function applyThemeColor(src) {
+    if (!src) return;
+
+    const img = new Image();
+    // 处理跨域，支持绝大多数公共随机图库API
+    img.crossOrigin = 'anonymous';
+    
+    img.onload = function() {
+      try {
+        const rgb = getAverageColor(img);
+        const hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+        const root = document.documentElement;
+
+        // 只修改色相变量，全站主题色自动同步
+        root.style.setProperty('--hue', hsl.h);
+        
+        // 关闭保持饱和度时，同步壁纸本身的饱和度
+        if (!CONFIG.keepSaturation) {
+          root.style.setProperty('--saturation', hsl.s + '%');
+        }
+
+        // 添加平滑过渡
+        root.style.transition = `--hue ${CONFIG.transition}s ease`;
+      } catch (e) {
+        // 取色失败自动回退默认主题色，不报错
+        console.warn('壁纸取色失败，使用默认主题色', e);
+      }
+    };
+
+    img.onerror = () => console.warn('壁纸加载失败，跳过取色');
+    img.src = src;
+  }
+
+  // 页面加载完成后执行
+  if (document.readyState === 'complete') {
+    applyThemeColor(getWallpaperSrc());
+  } else {
+    window.addEventListener('load', () => applyThemeColor(getWallpaperSrc()));
+  }
+
+  // 进阶：开启壁纸切换功能时，监听壁纸变化自动重新取色
+  setTimeout(() => {
+    const wallpaperEl = document.querySelector('[class*="wallpaper"]');
+    if (!wallpaperEl) return;
+    
+    new MutationObserver(() => {
+      const newSrc = getWallpaperSrc();
+      if (newSrc) applyThemeColor(newSrc);
+    }).observe(wallpaperEl, {
+      attributes: true,
+      attributeFilter: ['src', 'style'],
+      subtree: true
+    });
+  }, 1000);
+})();
+</script>
+
 
 </Layout>
 
