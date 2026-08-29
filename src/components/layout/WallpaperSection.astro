@@ -190,6 +190,64 @@ const { state, backgroundImages, title, bannerPostMeta } = Astro.props;
             var container = document.getElementById('banner-images-container');
             if (!container) return;
 
+            // 从当前壁纸提取主题色。图片由同源 /api/wallpaper 提供，因此无需 CORS。
+            var THEME_CONFIG = { sampleSize: 64, transition: 0.8 };
+
+            function rgbToHsl(r, g, b) {
+                r /= 255; g /= 255; b /= 255;
+                var max = Math.max(r, g, b), min = Math.min(r, g, b);
+                var h = 0, sat = 0, l = (max + min) / 2;
+                if (max !== min) {
+                    var d = max - min;
+                    sat = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                    if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+                    else if (max === g) h = (b - r) / d + 2;
+                    else h = (r - g) / d + 4;
+                    h /= 6;
+                }
+                return { h: Math.round(h * 360), s: Math.round(sat * 100), l: Math.round(l * 100) };
+            }
+
+            function getAverageColor(img) {
+                if (!img.naturalWidth || !img.naturalHeight) return null;
+                var canvas = document.createElement('canvas');
+                var ctx = canvas.getContext('2d', { willReadFrequently: true });
+                if (!ctx) return null;
+                var scale = Math.min(THEME_CONFIG.sampleSize / img.naturalWidth, THEME_CONFIG.sampleSize / img.naturalHeight);
+                canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+                canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                var data;
+                try { data = ctx.getImageData(0, 0, canvas.width, canvas.height).data; }
+                catch (error) { console.warn('[Wallpaper Theme] Canvas 读取失败:', error); return null; }
+                var r = 0, g = 0, b = 0, count = 0;
+                for (var i = 0; i < data.length; i += 16) {
+                    if (data[i + 3] < 128) continue;
+                    r += data[i]; g += data[i + 1]; b += data[i + 2]; count++;
+                }
+                return count ? { r: Math.round(r / count), g: Math.round(g / count), b: Math.round(b / count) } : null;
+            }
+
+            function applyWallpaperTheme(img) {
+                if (!img || img.dataset.wallpaperThemeApplied === 'true') return;
+                function process() {
+                    if (!img.naturalWidth || !img.naturalHeight) return;
+                    var rgb = getAverageColor(img);
+                    if (!rgb) return;
+                    var hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+                    var root = document.documentElement;
+                    root.style.transition = '--configHue ' + THEME_CONFIG.transition + 's ease';
+                    root.style.setProperty('--configHue', String(hsl.h));
+                    root.style.setProperty('--wallpaper-hue', String(hsl.h));
+                    root.style.setProperty('--wallpaper-saturation', hsl.s + '%');
+                    root.style.setProperty('--wallpaper-lightness', hsl.l + '%');
+                    img.dataset.wallpaperThemeApplied = 'true';
+                    console.debug('[Wallpaper Theme] hue:', hsl.h);
+                }
+                if (img.complete && img.naturalWidth > 0) requestAnimationFrame(process);
+                else img.addEventListener('load', function () { requestAnimationFrame(process); }, { once: true });
+            }
+
             var WALLPAPER_BANNER = 'banner';
             var interval = parseInt(container.dataset.carouselInterval || '5000', 10);
             var switchable = container.dataset.carouselSwitchable === 'true';
@@ -252,6 +310,8 @@ const { state, backgroundImages, title, bannerPostMeta } = Astro.props;
                 }
                 slideEl.appendChild(frag);
                 tpl.remove();
+                var insertedImg = slideEl.querySelector('img');
+                if (insertedImg) applyWallpaperTheme(insertedImg);
                 fadeInWhenLoaded(slideEl);
                 return true;
             }
@@ -470,6 +530,64 @@ const { state, backgroundImages, title, bannerPostMeta } = Astro.props;
             var container = document.getElementById('banner-images-container');
             if (!container) return;
 
+            // 从当前壁纸提取主题色。图片由同源 /api/wallpaper 提供，因此无需 CORS。
+            var THEME_CONFIG = { sampleSize: 64, transition: 0.8 };
+
+            function rgbToHsl(r, g, b) {
+                r /= 255; g /= 255; b /= 255;
+                var max = Math.max(r, g, b), min = Math.min(r, g, b);
+                var h = 0, sat = 0, l = (max + min) / 2;
+                if (max !== min) {
+                    var d = max - min;
+                    sat = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                    if (max === r) h = (g - b) / d + (g < b ? 6 : 0);
+                    else if (max === g) h = (b - r) / d + 2;
+                    else h = (r - g) / d + 4;
+                    h /= 6;
+                }
+                return { h: Math.round(h * 360), s: Math.round(sat * 100), l: Math.round(l * 100) };
+            }
+
+            function getAverageColor(img) {
+                if (!img.naturalWidth || !img.naturalHeight) return null;
+                var canvas = document.createElement('canvas');
+                var ctx = canvas.getContext('2d', { willReadFrequently: true });
+                if (!ctx) return null;
+                var scale = Math.min(THEME_CONFIG.sampleSize / img.naturalWidth, THEME_CONFIG.sampleSize / img.naturalHeight);
+                canvas.width = Math.max(1, Math.round(img.naturalWidth * scale));
+                canvas.height = Math.max(1, Math.round(img.naturalHeight * scale));
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                var data;
+                try { data = ctx.getImageData(0, 0, canvas.width, canvas.height).data; }
+                catch (error) { console.warn('[Wallpaper Theme] Canvas 读取失败:', error); return null; }
+                var r = 0, g = 0, b = 0, count = 0;
+                for (var i = 0; i < data.length; i += 16) {
+                    if (data[i + 3] < 128) continue;
+                    r += data[i]; g += data[i + 1]; b += data[i + 2]; count++;
+                }
+                return count ? { r: Math.round(r / count), g: Math.round(g / count), b: Math.round(b / count) } : null;
+            }
+
+            function applyWallpaperTheme(img) {
+                if (!img || img.dataset.wallpaperThemeApplied === 'true') return;
+                function process() {
+                    if (!img.naturalWidth || !img.naturalHeight) return;
+                    var rgb = getAverageColor(img);
+                    if (!rgb) return;
+                    var hsl = rgbToHsl(rgb.r, rgb.g, rgb.b);
+                    var root = document.documentElement;
+                    root.style.transition = '--configHue ' + THEME_CONFIG.transition + 's ease';
+                    root.style.setProperty('--configHue', String(hsl.h));
+                    root.style.setProperty('--wallpaper-hue', String(hsl.h));
+                    root.style.setProperty('--wallpaper-saturation', hsl.s + '%');
+                    root.style.setProperty('--wallpaper-lightness', hsl.l + '%');
+                    img.dataset.wallpaperThemeApplied = 'true';
+                    console.debug('[Wallpaper Theme] hue:', hsl.h);
+                }
+                if (img.complete && img.naturalWidth > 0) requestAnimationFrame(process);
+                else img.addEventListener('load', function () { requestAnimationFrame(process); }, { once: true });
+            }
+
             function materialize(slot, high) {
                 var tpl = slot.querySelector('template');
                 if (!tpl) return;
@@ -487,6 +605,7 @@ const { state, backgroundImages, title, bannerPostMeta } = Astro.props;
                 }
                 slot.appendChild(frag);
                 tpl.remove();
+                if (img) applyWallpaperTheme(img);
                 // Layout 的全局淡入只扫解析期的图片，克隆进来的要自己接管
                 var ph = slot.querySelector('.lqip-placeholder');
                 if (!img) return;

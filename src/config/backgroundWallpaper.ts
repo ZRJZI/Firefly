@@ -18,10 +18,10 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 	 * 所以建议使用自己的图片的时候命名为其他名称，不要使用d1-d6，m1-m6这些名称
 	 *
 	 * 如果只使用一张图片或者使用随机图API，推荐直接使用字符串格式：
-	 * desktop: "https://t.alcy.cc/pc",   // 随机图API
+	 * desktop: "/api/wallpaper?type=pc",   // 随机图API
 	 * desktop: "assets/images/DesktopWallpaper/d1.avif", // 单张图片
 	 *
-	 * mobile: "https://t.alcy.cc/mp", // 随机图API
+	 * mobile: "/api/wallpaper?type=mp", // 随机图API
 	 * mobile: "assets/images/MobileWallpaper/m1.avif", // 单张图片
 	 *
 	 * 支持配置多张图片（数组），每次刷新页面随机显示一张：
@@ -39,12 +39,12 @@ export const backgroundWallpaper: BackgroundWallpaperConfig = {
 		// 桌面背景图片（支持单张或多张随机）
 		// desktop: "assets/images/DesktopWallpaper/d1.avif",
 		desktop: [
-			"https://t.alcy.cc/pc",
+			"/api/wallpaper?type=pc",
 		],
 		// 移动背景图片（支持单张或多张随机）
 		// mobile: "assets/images/MobileWallpaper/m1.avif",
 		mobile: [
-			"https://t.alcy.cc/mp",
+			"/api/wallpaper?type=mp",
 		],
 		// 背景视频播放地址
 		// 支持单个视频路径（字符串）或多个视频循环（数组，参考上面壁纸配置）
