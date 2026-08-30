@@ -350,9 +350,24 @@ const siteLogo = await getSiteLogo();
         isDark ? darkTheme : lightTheme
       );
 
-      // Load the hue from local storage
-      const hue = localStorage.getItem("hue") || configHue;
+      // 先读取“上一次壁纸取到的主题色”。
+      //
+      // 普通页面切换时，壁纸并没有更换，所以直接继续使用
+      // 上一次壁纸的颜色，这样就不会出现：
+      //
+      // 壁纸主题色 → 默认绿色 → 壁纸主题色
+      //
+      // 只有第一次还没有壁纸主题色时，才使用普通的 hue / 默认主题色。
+      const wallpaperHue = localStorage.getItem("wallpaperHue");
+      const hue = wallpaperHue || localStorage.getItem("hue") || configHue;
       document.documentElement.style.setProperty("--hue", hue);
+
+      // 如果已经有保存过的壁纸主题色，说明不是第一次加载壁纸。
+      // 这次属于页面切换，直接取消“壁纸加载中”状态，
+      // 避免切换页面时短暂恢复成灰色。
+      if (wallpaperHue) {
+        document.documentElement.removeAttribute("data-wallpaper-theme");
+      }
 
       // 设置卡片透明度（全屏透明模式下使用），优先使用用户自定义值
       const storedCardOpacity = localStorage.getItem("overlayCardOpacity");

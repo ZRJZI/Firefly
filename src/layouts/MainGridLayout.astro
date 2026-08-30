@@ -501,6 +501,13 @@ function getWallpaperColor(img: HTMLImageElement) {
 				String(hsl.h)
 			);
 
+			// 把这次壁纸取到的颜色保存下来。
+			//
+			// 页面通过 Swup 切换时，Layout 会重新执行初始化脚本。
+			// 保存下来以后，下一页就可以直接继续使用这个颜色，
+			// 不会先恢复成默认绿色。
+			localStorage.setItem("wallpaperHue", String(hsl.h));
+
 			/*
 			 * 壁纸已经成功取到颜色。
 			 *
@@ -561,6 +568,17 @@ let updateTimer: ReturnType<typeof setTimeout> | null = null;
 		const wrapper =
 			document.getElementById("wallpaper-wrapper");
 
+		// 页面通过 Swup 切换时，这个脚本可能会再次执行。
+		// 如果第一次已经建立了监听器，就不要重复建立，
+		// 否则会出现多个观察器、多个定时任务一起运行。
+		if (
+			document.documentElement.hasAttribute(
+				"data-wallpaper-theme-script-started"
+			)
+		) {
+			return;
+		}
+
 		// 壁纸还没进入页面。
 		//
 		// 300 毫秒后再试一次。
@@ -572,6 +590,14 @@ let updateTimer: ReturnType<typeof setTimeout> | null = null;
 
 			return;
 		}
+
+		// 记录“壁纸主题监听器已经启动”。
+		//
+		// 之后普通页面切换不会再次创建监听器。
+		document.documentElement.setAttribute(
+			"data-wallpaper-theme-script-started",
+			"true"
+		);
 
 		// 页面第一次打开时取一次颜色。
 		scheduleThemeUpdate();
@@ -634,19 +660,14 @@ let updateTimer: ReturnType<typeof setTimeout> | null = null;
 		);
 
 
-		// ==================================================
-		// 最后的保险机制
-		// ==================================================
+		// 不再每秒轮询。
 		//
-		// 每秒检查一次。
+		// MutationObserver + 图片 load 事件已经可以处理：
+		// 1. 页面第一次加载
+		// 2. 壁纸轮播切换
+		// 3. 图片延迟加载完成
 		//
-		// 这不是为了每秒重新取色，
-		// 而是防止某些轮播变化没有被 MutationObserver 捕获。
-		//
-
-		setInterval(() => {
-			scheduleThemeUpdate();
-		}, 1000);
+		// 这样普通页面切换时也不会重复做无意义的取色工作。
 	}
 
 
