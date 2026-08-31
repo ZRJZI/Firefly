@@ -201,12 +201,17 @@ const remoteReferrerPolicy =
 		object-fit: cover;
 	}
 
-	/* 自然高度模式（详情页封面）：高度跟随图片原始宽高比，不裁上下、只裁两边 */
+	/* 自然高度模式（详情页封面）：保持原比例，但限制最大显示高度，避免竖图占满整页 */
 	.cover-image-container[data-natural-height] {
 		min-height: 0;
+		max-height: 70vh;
 	}
 	.cover-image-container[data-natural-height] img {
+		width: auto !important;
+		max-width: 100%;
+		max-height: 70vh;
 		height: auto !important;
+		object-fit: contain;
 	}
 </style>
 
