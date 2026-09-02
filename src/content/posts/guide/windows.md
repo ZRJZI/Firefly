@@ -7,7 +7,7 @@ image: "./129087901_p0_master1200.avif"
 tags: ["演示"]
 category: 文章示例
 author: mitsuka
-draft: true
+draft: false
 comment: true
 ---
 
