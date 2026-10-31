@@ -10,8 +10,8 @@ const SITE_LANG = resolveSiteLang("zh_CN");
 const pages = resolvePageToggles({
 	// ── 社交 (Social) ──────────────────────────────────
 
-	// 友链页面开关
-	friends: true,
+	// 友链页面开关（已下线：导航里不再显示，直接访问 /friends/ 会 404）
+	friends: false,
 	// 留言板页面开关，需要配置评论系统
 	guestbook: true,
 

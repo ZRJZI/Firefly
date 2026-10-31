@@ -3,6 +3,7 @@ title: 游戏里的人物走路，为什么看着那么真实？
 published: 2026-10-31
 pinned: false
 description: "从一个游戏里的直觉问题出发，聊聊动捕数据、Motion Matching 和 Foot IK —— 人走路那点事，游戏公司是怎么抠出来的。"
+image: ""
 tags: ["图形学", "游戏", "动画", "好奇笔记"]
 category: 好奇笔记
 series: "游戏是怎么变好看的"

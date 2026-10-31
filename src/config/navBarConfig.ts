@@ -36,19 +36,8 @@ const getDynamicNavBarConfig = (): NavBarConfig => {
 		],
 	});
 
-	//社交及其子菜单
-	links.push({
-		name: "社交",
-		url: "#",
-		icon: "material-symbols:group",
-		children: [
-			// 友链
-			LinkPresets.Friends,
-
-			// 留言
-			LinkPresets.Guestbook,
-		],
-	});
+	// 留言（原「社交」分组只有友链和留言，友链已下线，留言改成一级菜单）
+	links.push(LinkPresets.Guestbook);
 
 	// 我的及其子菜单
 	links.push({
@@ -205,9 +194,10 @@ export const LinkPresets: Record<string, NavBarLink> = {
 	},
 	Bilibili: {
 		name: "哔哩哔哩",
-		url: "/bilibili/",
+		// 直接跳转 B 站个人主页（要改回站内追番页就把 url 换成 "/bilibili/" 并去掉 external）
+		url: "https://space.bilibili.com/405788793",
 		icon: "fa7-brands:bilibili",
-		pageKey: "bilibili",
+		external: true,
 	},
 	Bangumi: {
 		name: "番组计划",

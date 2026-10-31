@@ -3,6 +3,7 @@ title: 开了光追就掉帧，那光追到底在算什么？
 published: 2026-10-31
 pinned: false
 description: "从'开光追为什么这么吃显卡'聊起：光追、路径追踪、BVH、降噪，这些词到底是怎么回事。"
+image: ""
 tags: ["图形学", "显卡", "光追", "好奇笔记"]
 category: 好奇笔记
 series: "游戏是怎么变好看的"
