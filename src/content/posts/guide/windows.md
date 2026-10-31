@@ -4,8 +4,10 @@ published: 2026-09-01
 pinned: false
 description: "分享一些win11的实用和优化工具"
 image: "./129087901_p0_master1200.avif"
-tags: ["演示"]
-category: 文章示例
+tags: ["Windows", "软件", "系统优化", "折腾记"]
+category: 折腾记
+series: "Windows 折腾手册"
+seriesOrder: 1
 author: mitsuka
 draft: false
 comment: true
@@ -110,7 +112,7 @@ Everything 是一款非常轻量的文件搜索工具，搜索速度很快。\
 平时电脑文件比较多的时候，可以直接输入文件名快速找到需要的文件，也支持通过文件类型进行筛选。\
 比如：
 
-`*.png`
+`*.png`<!--       AFEADAS-->
 
 可以搜索所有 PNG 图片。\
 
