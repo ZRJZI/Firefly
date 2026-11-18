@@ -12,3 +12,8 @@ comment: true
 password: "963792"
 passwordHint: ""
 ---
+
+昆明密保答案
+
+- a：1118
+- b：Mitsuka
